@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3U Link Ayıklayıcı</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#111827',
+                            950: '#0b0f19',
+                        },
+                        brand: {
+                            cyan: '#06b6d4',
+                            purple: '#a855f7',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom Dark Glassmorphism Styles */
+        body {
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 40%),
+                radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.12) 0px, transparent 40%),
+                radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%);
+            background-attachment: fixed;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-card-glow {
+            position: relative;
+        }
+        .glass-card-glow::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(168, 85, 247, 0.2), transparent);
+            border-radius: inherit;
+            z-index: -1;
+            opacity: 0.8;
+        }
+
+        /* Custom Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(6, 182, 212, 0.7);
+        }
+
+        /* Toast Notifications Animation */
+        .toast-enter {
+            transform: translateY(100%) scale(0.9);
+            opacity: 0;
+        }
+        .toast-show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+    <header class="sticky top-0 z-40 glass-card border-b border-slate-800/80 px-4 sm:px-8 py-4">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
+                    <i class="fa-solid fa-filter text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold tracking-wide bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                        M3U Link Ayıklayıcı
+                    </h1>
+                    <p class="text-xs text-slate-400">Geliştirici: <span class="text-cyan-400 font-semibold">Zeronis</span></p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-grow">
+
+        <!-- INPUT SECTION CARD -->
+        <section class="glass-card glass-card-glow rounded-2xl p-5 sm:p-6 transition-all duration-300">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-code text-cyan-400"></i>
+                    <h2 class="text-base font-semibold text-slate-100">M3U Linkleri Girin</h2>
+                </div>
+                
+                <!-- Action Controls: File Upload & Clear Input -->
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <input type="file" id="fileInput" accept=".txt,.m3u,.m3u8,.lst" class="hidden" onchange="handleFileUpload(event)">
+                    
+                    <button onclick="document.getElementById('fileInput').click()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-slate-700/80 transition flex items-center space-x-2 font-medium">
+                        <i class="fa-solid fa-file-arrow-up text-cyan-400"></i>
+                        <span>Dosya Yükle (.txt, .m3u, .lst)</span>
+                    </button>
+
+                    <button onclick="clearInputText()" class="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-red-500/20 text-slate-400 hover:text-red-300 border border-slate-700/60 hover:border-red-500/30 transition flex items-center space-x-2 font-medium">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Metni Temizle</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Textarea Dropzone -->
+            <div class="relative group" id="dropZone">
+                <textarea 
+                    id="m3uInput" 
+                    rows="6" 
+                    placeholder="M3U linklerinizi veya ham metni buraya yapıştırın ya da bir dosyayı buraya sürükleyip bırakın..."
+                    class="w-full bg-slate-950/90 text-slate-200 placeholder-slate-600 font-mono text-xs sm:text-sm p-4 rounded-xl border border-slate-800/80 focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-500/20 outline-none transition resize-y shadow-inner"
+                    oninput="autoProcessDebounce()"
+                ></textarea>
+                
+                <!-- Drag and Drop Overlay -->
+                <div id="dropHint" class="hidden absolute inset-0 bg-slate-950/90 rounded-xl border-2 border-dashed border-cyan-400 flex flex-col items-center justify-center space-y-2 text-cyan-400 pointer-events-none z-10">
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl animate-bounce"></i>
+                    <span class="text-sm font-semibold">Dosyayı buraya bırakın (.txt, .m3u, .lst)</span>
+                </div>
+            </div>
+
+            <!-- Options & Action Bar -->
+            <div class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-slate-800/60">
+                
+                <!-- Checkboxes -->
+                <div class="flex flex-wrap items-center gap-5 text-xs text-slate-300 w-full sm:w-auto">
+                    <label class="flex items-center space-x-2 cursor-pointer group select-none">
+                        <input type="checkbox" id="optDeduplicate" checked onchange="processM3UData()" class="w-4 h-4 rounded border-slate-700 text-cyan-500 focus:ring-cyan-500/30 bg-slate-900 cursor-pointer">
+                        <span class="group-hover:text-cyan-300 transition">Yinelenenleri Filtrele</span>
+                    </label>
+
+                    <label class="flex items-center space-x-2 cursor-pointer group select-none">
+                        <input type="checkbox" id="optCleanEmpty" checked onchange="processM3UData()" class="w-4 h-4 rounded border-slate-700 text-cyan-500 focus:ring-cyan-500/30 bg-slate-900 cursor-pointer">
+                        <span class="group-hover:text-cyan-300 transition">Boş Satırları Temizle</span>
+                    </label>
+
+                    <label class="flex items-center space-x-2 cursor-pointer group select-none">
+                        <input type="checkbox" id="optShowProtocol" checked onchange="processM3UData()" class="w-4 h-4 rounded border-slate-700 text-cyan-500 focus:ring-cyan-500/30 bg-slate-900 cursor-pointer">
+                        <span class="group-hover:text-cyan-300 transition text-cyan-400 font-medium">Protokolü Göster (http://)</span>
+                    </label>
+                </div>
+
+                <!-- Process Button -->
+                <button 
+                    onclick="processM3UData()" 
+                    class="w-full sm:w-auto px-8 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold text-sm transition-all duration-200 shadow-lg shadow-cyan-500/20 flex items-center justify-center space-x-2 active:scale-[0.98]"
+                >
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Ayrıştır / Temizle</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <!-- Toplanan User:Pass -->
+            <div class="glass-card rounded-xl p-4 border border-slate-800/80 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">Toplanan User:Pass</div>
+                    <div id="statUserPassCount" class="text-xl font-bold font-mono text-purple-400">0</div>
+                </div>
+            </div>
+
+            <!-- Toplanan Panel:Port -->
+            <div class="glass-card rounded-xl p-4 border border-slate-800/80 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                    <i class="fa-solid fa-server"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">Toplanan Panel:Port</div>
+                    <div id="statPanelPortCount" class="text-xl font-bold font-mono text-cyan-400">0</div>
+                </div>
+            </div>
+
+            <!-- İşlenen Satır -->
+            <div class="glass-card rounded-xl p-4 border border-slate-800/80 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <i class="fa-solid fa-list-check"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">İşlenen Satır</div>
+                    <div id="statTotalLines" class="text-xl font-bold font-mono text-white">0</div>
+                </div>
+            </div>
+
+            <!-- Ayrıştırma Süresi -->
+            <div class="glass-card rounded-xl p-4 border border-slate-800/80 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <i class="fa-solid fa-stopwatch"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">Ayrıştırma Süresi</div>
+                    <div id="statExecTime" class="text-xl font-bold font-mono text-emerald-400">0 ms</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- COLUMN 1: USER : PASS LIST -->
+            <section class="glass-card rounded-2xl p-5 flex flex-col h-[560px]">
+                
+                <!-- Column Header -->
+                <div class="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                            <i class="fa-solid fa-user-shield text-sm"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-100">User : Pass Listesi</h3>
+                            <p class="text-[11px] text-slate-400"><code class="font-mono text-purple-300">kullanici:sifre</code></p>
+                        </div>
+                    </div>
+                    <span id="badgeUserPassCount" class="px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-mono font-bold">
+                        0 Kayıt
+                    </span>
+                </div>
+
+                <!-- Toolbar & Actions -->
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <div class="relative flex-grow min-w-[140px]">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input 
+                            type="text" 
+                            id="searchUserPass" 
+                            oninput="renderColumnLists()" 
+                            placeholder="Ara..." 
+                            class="w-full bg-slate-900 text-xs text-slate-200 placeholder-slate-500 pl-7 pr-2 py-1.5 rounded-lg border border-slate-800 focus:border-purple-500/50 outline-none"
+                        >
+                    </div>
+
+                    <button onclick="toggleSort('userPass')" id="btnSortUserPass" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-arrow-down-a-z text-purple-400"></i>
+                        <span id="labelSortUserPass">Sırala</span>
+                    </button>
+
+                    <button onclick="copyList('userPass')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-copy text-purple-400"></i>
+                        <span>Kopyala</span>
+                    </button>
+
+                    <button onclick="downloadTxt('userPass')" class="px-2.5 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-purple-200 text-xs font-medium border border-purple-500/30 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-file-arrow-down"></i>
+                        <span>TXT İndir</span>
+                    </button>
+
+                    <button onclick="clearSingleList('userPass')" class="px-2 py-1.5 rounded-lg bg-slate-800/60 hover:bg-red-500/20 text-slate-400 hover:text-red-300 text-xs font-medium border border-slate-700/50 transition" title="Temizle">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+
+                <!-- List View Container -->
+                <div class="flex-grow bg-slate-950/80 rounded-xl border border-slate-800/80 p-3 font-mono text-xs overflow-y-auto relative">
+                    <div id="outputUserPass" class="space-y-1 text-slate-300">
+                        <div class="text-slate-600 italic py-16 text-center font-sans">
+                            Henüz kayıt yok.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMN 2: PANEL : PORT LIST -->
+            <section class="glass-card rounded-2xl p-5 flex flex-col h-[560px]">
+                
+                <!-- Column Header -->
+                <div class="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-800">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                            <i class="fa-solid fa-globe text-sm"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-100">Panel : Port Listesi</h3>
+                            <p class="text-[11px] text-slate-400"><code class="font-mono text-cyan-300">http://domain:port</code></p>
+                        </div>
+                    </div>
+                    <span id="badgePanelPortCount" class="px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-xs font-mono font-bold">
+                        0 Kayıt
+                    </span>
+                </div>
+
+                <!-- Toolbar & Actions -->
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <div class="relative flex-grow min-w-[140px]">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input 
+                            type="text" 
+                            id="searchPanelPort" 
+                            oninput="renderColumnLists()" 
+                            placeholder="Ara..." 
+                            class="w-full bg-slate-900 text-xs text-slate-200 placeholder-slate-500 pl-7 pr-2 py-1.5 rounded-lg border border-slate-800 focus:border-cyan-500/50 outline-none"
+                        >
+                    </div>
+
+                    <button onclick="toggleSort('panelPort')" id="btnSortPanelPort" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-arrow-down-a-z text-cyan-400"></i>
+                        <span id="labelSortPanelPort">Sırala</span>
+                    </button>
+
+                    <button onclick="copyList('panelPort')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-copy text-cyan-400"></i>
+                        <span>Kopyala</span>
+                    </button>
+
+                    <button onclick="downloadTxt('panelPort')" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 hover:text-cyan-200 text-xs font-medium border border-cyan-500/30 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-file-arrow-down"></i>
+                        <span>TXT İndir</span>
+                    </button>
+
+                    <button onclick="clearSingleList('panelPort')" class="px-2 py-1.5 rounded-lg bg-slate-800/60 hover:bg-red-500/20 text-slate-400 hover:text-red-300 text-xs font-medium border border-slate-700/50 transition" title="Temizle">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+
+                <!-- List View Container -->
+                <div class="flex-grow bg-slate-950/80 rounded-xl border border-slate-800/80 p-3 font-mono text-xs overflow-y-auto relative">
+                    <div id="outputPanelPort" class="space-y-1 text-slate-300">
+                        <div class="text-slate-600 italic py-16 text-center font-sans">
+                            Henüz kayıt yok.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <footer class="glass-card border-t border-slate-800/80 py-4 px-4 sm:px-8 mt-auto text-xs text-slate-500 text-center">
+        <p class="text-slate-400 font-medium">M3U Link & Hesap Ayıklayıcı - Zeronis tarafından geliştirildi.</p>
+    </footer>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        /**
+         * APPLICATION STATE MANAGEMENT
+         */
+        const state = {
+            userPassList: [],        // Extracted User:Pass strings
+            panelPortList: [],       // Extracted Panel:Port strings
+            filteredUserPass: [],
+            filteredPanelPort: [],
+            sortState: {
+                userPass: 'none',    // 'none', 'asc', 'desc'
+                panelPort: 'none'
+            },
+            debounceTimer: null
+        };
+
+        /**
+         * DEBOUNCE AUTO-PROCESS
+         */
+        function autoProcessDebounce() {
+            clearTimeout(state.debounceTimer);
+            state.debounceTimer = setTimeout(() => {
+                processM3UData(true);
+            }, 300);
+        }
+
+        /**
+         * FILE UPLOAD HANDLER
+         */
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('m3uInput').value = e.target.result;
+                processM3UData();
+                showToast(`"${file.name}" dosyası yüklendi!`, "success");
+            };
+            reader.readAsText(file);
+        }
+
+        /**
+         * DRAG AND DROP HANDLERS
+         */
+        const dropZone = document.getElementById('dropZone');
+        const dropHint = document.getElementById('dropHint');
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropHint.classList.remove('hidden');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropHint.classList.add('hidden');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (files && files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('m3uInput').value = evt.target.result;
+                    processM3UData();
+                    showToast(`"${file.name}" yüklendi ve ayrıştırıldı!`, "success");
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        /**
+         * CLEAR INPUT TEXTAREA
+         */
+        function clearInputText() {
+            document.getElementById('m3uInput').value = '';
+            document.getElementById('fileInput').value = '';
+            state.userPassList = [];
+            state.panelPortList = [];
+            state.filteredUserPass = [];
+            state.filteredPanelPort = [];
+
+            updateStats(0, 0, 0, 0);
+            renderColumnLists();
+            showToast("Metin kutusu temizlendi.", "info");
+        }
+
+        /**
+         * CLEAR SINGLE LIST COLUMN
+         */
+        function clearSingleList(type) {
+            if (type === 'userPass') {
+                state.userPassList = [];
+                state.filteredUserPass = [];
+            } else if (type === 'panelPort') {
+                state.panelPortList = [];
+                state.filteredPanelPort = [];
+            }
+            renderColumnLists();
+            showToast("Liste temizlendi.", "info");
+        }
+
+        /**
+         * CORE M3U PARSING ALGORITHM
+         */
+        function processM3UData(isSilent = false) {
+            const startTime = performance.now();
+            const rawText = document.getElementById('m3uInput').value;
+
+            if (!rawText.trim()) {
+                state.userPassList = [];
+                state.panelPortList = [];
+                updateStats(0, 0, 0, 0);
+                renderColumnLists();
+                if (!isSilent) showToast("Ayrıştırılacak metin bulunamadı.", "warning");
+                return;
+            }
+
+            const deduplicate = document.getElementById('optDeduplicate').checked;
+            const cleanEmpty = document.getElementById('optCleanEmpty').checked;
+            const showProtocol = document.getElementById('optShowProtocol').checked;
+
+            // Extract all URLs from input text
+            const urlRegex = /(https?:\/\/[^\s"'<>]+)/gi;
+            const rawMatches = rawText.match(urlRegex) || [];
+
+            const userPassArr = [];
+            const panelPortArr = [];
+
+            rawMatches.forEach((rawUrl) => {
+                let cleanUrlStr = rawUrl.replace(/[;,\)\>\"']$/, '');
+
+                try {
+                    const parsed = new URL(cleanUrlStr);
+                    const protocol = parsed.protocol; 
+                    const hostname = parsed.hostname;
+                    
+                    let port = parsed.port;
+                    if (!port) {
+                        port = (protocol === 'https:') ? '443' : '80';
+                    }
+
+                    let panelStr = showProtocol ? `${protocol}//${hostname}:${port}` : `${hostname}:${port}`;
+
+                    let username = '';
+                    let password = '';
+
+                    const params = parsed.searchParams;
+                    const userKeys = ['username', 'user', 'u', 'usr', 'account'];
+                    const passKeys = ['password', 'pass', 'pw', 'p', 'pwd'];
+
+                    for (let key of userKeys) {
+                        if (params.has(key)) {
+                            username = params.get(key);
+                            break;
+                        }
+                    }
+
+                    for (let key of passKeys) {
+                        if (params.has(key)) {
+                            password = params.get(key);
+                            break;
+                        }
+                    }
+
+                    // Fallback URL Path Parsing (/live/user/pass/...)
+                    if (!username || !password) {
+                        const pathSegments = parsed.pathname.split('/').filter(Boolean);
+                        if (pathSegments.length >= 3 && ['live', 'movie', 'series', 'get.php'].includes(pathSegments[0])) {
+                            username = pathSegments[1] || '';
+                            password = (pathSegments[2] || '').split('.')[0];
+                        } else if (pathSegments.length >= 2 && !parsed.search) {
+                            username = pathSegments[0] || '';
+                            password = (pathSegments[1] || '').split('.')[0];
+                        }
+                    }
+
+                    const userPassStr = (username && password) ? `${username}:${password}` : '';
+
+                    if (userPassStr) userPassArr.push(userPassStr);
+                    if (panelStr) panelPortArr.push(panelStr);
+
+                } catch (e) {
+                    // Ignore malformed URLs
+                }
+            });
+
+            // Filter duplicates and empty values
+            let finalUserPass = userPassArr;
+            let finalPanelPort = panelPortArr;
+
+            if (deduplicate) {
+                finalUserPass = [...new Set(finalUserPass)];
+                finalPanelPort = [...new Set(finalPanelPort)];
+            }
+
+            if (cleanEmpty) {
+                finalUserPass = finalUserPass.filter(s => s && s.trim().length > 0);
+                finalPanelPort = finalPanelPort.filter(s => s && s.trim().length > 0);
+            }
+
+            state.userPassList = finalUserPass;
+            state.panelPortList = finalPanelPort;
+
+            const endTime = performance.now();
+            const duration = Math.round(endTime - startTime);
+
+            const totalLines = rawText.split('\n').length;
+
+            updateStats(finalUserPass.length, finalPanelPort.length, totalLines, duration);
+            renderColumnLists();
+
+            if (!isSilent) {
+                showToast(`İşlem Tamamlandı! ${finalUserPass.length} Hesap, ${finalPanelPort.length} Panel bulundu.`, "success");
+            }
+        }
+
+        /**
+         * UPDATE STATS DISPLAY
+         */
+        function updateStats(credentials, panels, totalLines, timeMs) {
+            document.getElementById('statUserPassCount').innerText = credentials.toLocaleString('tr-TR');
+            document.getElementById('statPanelPortCount').innerText = panels.toLocaleString('tr-TR');
+            document.getElementById('statTotalLines').innerText = totalLines.toLocaleString('tr-TR');
+            document.getElementById('statExecTime').innerText = `${timeMs} ms`;
+        }
+
+        /**
+         * TOGGLE SORTING (A-Z / Z-A)
+         */
+        function toggleSort(type) {
+            const current = state.sortState[type];
+            let next = 'asc';
+            if (current === 'asc') next = 'desc';
+            else if (current === 'desc') next = 'none';
+
+            state.sortState[type] = next;
+
+            const labelElMap = {
+                userPass: 'labelSortUserPass',
+                panelPort: 'labelSortPanelPort'
+            };
+            if (labelElMap[type]) {
+                document.getElementById(labelElMap[type]).innerText = next === 'asc' ? 'A-Z' : next === 'desc' ? 'Z-A' : 'Sırala';
+            }
+
+            renderColumnLists();
+        }
+
+        /**
+         * RENDER BOTH COLUMNS
+         */
+        function renderColumnLists() {
+            const userPassSearch = (document.getElementById('searchUserPass')?.value || '').toLowerCase().trim();
+            const panelPortSearch = (document.getElementById('searchPanelPort')?.value || '').toLowerCase().trim();
+
+            // 1. Render User:Pass Column
+            let userPassList = [...state.userPassList];
+            if (userPassSearch) userPassList = userPassList.filter(item => item.toLowerCase().includes(userPassSearch));
+            if (state.sortState.userPass === 'asc') userPassList.sort((a, b) => a.localeCompare(b));
+            else if (state.sortState.userPass === 'desc') userPassList.sort((a, b) => b.localeCompare(a));
+
+            state.filteredUserPass = userPassList;
+            document.getElementById('badgeUserPassCount').innerText = `${userPassList.length} Kayıt`;
+
+            const outputUserPassEl = document.getElementById('outputUserPass');
+            if (userPassList.length === 0) {
+                outputUserPassEl.innerHTML = `<div class="text-slate-600 italic py-16 text-center font-sans">Eşleşen kayıt bulunamadı.</div>`;
+            } else {
+                outputUserPassEl.innerHTML = userPassList.map(item => `
+                    <div class="flex items-center justify-between py-1 px-2.5 hover:bg-slate-900/90 rounded group transition">
+                        <span class="text-purple-300 font-mono select-all truncate pr-2">${escapeHtml(item)}</span>
+                        <button onclick="copySingleText('${escapeHtml(item)}')" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-purple-400 text-xs px-1.5 py-0.5 rounded transition flex-shrink-0" title="Kopyala">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+
+            // 2. Render Panel:Port Column
+            let panelPortList = [...state.panelPortList];
+            if (panelPortSearch) panelPortList = panelPortList.filter(item => item.toLowerCase().includes(panelPortSearch));
+            if (state.sortState.panelPort === 'asc') panelPortList.sort((a, b) => a.localeCompare(b));
+            else if (state.sortState.panelPort === 'desc') panelPortList.sort((a, b) => b.localeCompare(a));
+
+            state.filteredPanelPort = panelPortList;
+            document.getElementById('badgePanelPortCount').innerText = `${panelPortList.length} Kayıt`;
+
+            const outputPanelPortEl = document.getElementById('outputPanelPort');
+            if (panelPortList.length === 0) {
+                outputPanelPortEl.innerHTML = `<div class="text-slate-600 italic py-16 text-center font-sans">Eşleşen kayıt bulunamadı.</div>`;
+            } else {
+                outputPanelPortEl.innerHTML = panelPortList.map(item => `
+                    <div class="flex items-center justify-between py-1 px-2.5 hover:bg-slate-900/90 rounded group transition">
+                        <span class="text-cyan-300 font-mono select-all truncate pr-2">${escapeHtml(item)}</span>
+                        <button onclick="copySingleText('${escapeHtml(item)}')" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-cyan-400 text-xs px-1.5 py-0.5 rounded transition flex-shrink-0" title="Kopyala">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        /**
+         * COPY HELPERS
+         */
+        function copySingleText(text, message = "Panoya kopyalandı!") {
+            if (!text) return;
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = text;
+            tempTextArea.style.position = "fixed";
+            tempTextArea.style.left = "-9999px";
+            document.body.appendChild(tempTextArea);
+            tempTextArea.focus();
+            tempTextArea.select();
+
+            try {
+                document.execCommand('copy');
+                showToast(message, "success");
+            } catch (err) {
+                showToast("Kopyalama başarısız!", "error");
+            }
+
+            document.body.removeChild(tempTextArea);
+        }
+
+        function copyList(type) {
+            let content = '';
+            if (type === 'userPass') content = state.filteredUserPass.join('\n');
+            else if (type === 'panelPort') content = state.filteredPanelPort.join('\n');
+
+            if (!content) {
+                showToast("Kopyalanacak liste boş!", "warning");
+                return;
+            }
+
+            copySingleText(content, "Liste panoya kopyalandı!");
+        }
+
+        /**
+         * DOWNLOAD TXT FILE
+         */
+        function downloadTxt(type) {
+            let content = '';
+            let filename = '';
+
+            if (type === 'userPass') {
+                content = state.filteredUserPass.join('\n');
+                filename = 'zeronis_user_pass.txt';
+            } else if (type === 'panelPort') {
+                content = state.filteredPanelPort.join('\n');
+                filename = 'zeronis_panel_port.txt';
+            }
+
+            if (!content) {
+                showToast("İndirilecek veri yok!", "warning");
+                return;
+            }
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast(`"${filename}" indirildi.`, "info");
+        }
+
+        /**
+         * TOAST NOTIFICATIONS
+         */
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toastContainer');
+
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center space-x-3 px-4 py-3 rounded-xl border shadow-2xl text-xs sm:text-sm font-medium transition-all duration-300 toast-enter glass-card`;
+
+            let iconHtml = '';
+            if (type === 'success') {
+                toast.classList.add('border-emerald-500/40', 'text-emerald-300');
+                iconHtml = `<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>`;
+            } else if (type === 'error') {
+                toast.classList.add('border-red-500/40', 'text-red-300');
+                iconHtml = `<i class="fa-solid fa-triangle-exclamation text-red-400 text-base"></i>`;
+            } else if (type === 'warning') {
+                toast.classList.add('border-amber-500/40', 'text-amber-300');
+                iconHtml = `<i class="fa-solid fa-circle-exclamation text-amber-400 text-base"></i>`;
+            } else {
+                toast.classList.add('border-cyan-500/40', 'text-cyan-300');
+                iconHtml = `<i class="fa-solid fa-circle-info text-cyan-400 text-base"></i>`;
+            }
+
+            toast.innerHTML = `${iconHtml}<span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-show');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                toast.classList.add('toast-enter');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        /**
+         * ESCAPE HTML UTILITY
+         */
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
